@@ -1,0 +1,153 @@
+package com.maxim.mybatisplus.mapper;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.maxim.mybatisplus.Response;
+import com.maxim.mybatisplus.converter.stockDayKConverter;
+import com.maxim.mybatisplus.entity.stockDayK;
+import com.maxim.mybatisplus.entity.stockDayKDTO;
+import org.apache.ibatis.annotations.Mapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+//@Slf4j
+public class stockDayKMapperImpl{
+    @Autowired
+    private stockDayKMapper stockDayKMapper;
+
+    public Response<String> insertObj(){
+        stockDayK obj = stockDayK.builder()
+                .symbol("000001.SZ").tradeDate(LocalDate.now())
+                .open(10.0).high(10.0).low(10.0).amount(10.0)
+                .close(10.0).preClose(10.0).chgAmount(10.0).chgRate(10.0)
+                .volume(Long.parseLong("10")).turnoverRate(10.0).pe(10.0).pb(10.0).mv(10.0).cmv(10.0)
+                .createTime(LocalDateTime.now()).updateTime(LocalDateTime.now())
+                .build();
+        stockDayKMapper.insert(obj);
+        return Response.newSuccess("Success");
+    }
+
+    public Response<stockDayKDTO> selectById(Long id){
+        /* 先需要检查是否在数据库中 */
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        if (!stockDayKMapper.exists(queryWrapper.eq("id", id))){
+            return Response.newEmpty("Not Found");
+        }
+        stockDayK obj = stockDayKMapper.selectById(id);
+        return Response.newSuccess(stockDayKConverter.toDTO(obj));
+    }
+
+    public Response<String> deleteById(Long id){
+        /* 先需要检查是否在数据库中 */
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        if (!stockDayKMapper.exists(queryWrapper.eq("id", id))){
+            return Response.newEmpty("Not Found");
+        }
+        stockDayKMapper.deleteById(id);
+        return Response.newSuccess("Success");
+    }
+
+    /* MyBatis 进阶查询 */
+    public Response<List<stockDayKDTO>> selectByWrappers(){
+        /*
+        * 1. 多个QueryWrapper条件相叠加 +
+        * 2. 只取部分列
+        */
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        QueryWrapper<stockDayK> queryWrapper_ = queryWrapper.eq("trade_date",
+                        LocalDate.of(2024,1,1))
+                .like("symbol",".SZ"); // .first(true,"symbol");
+        List<String> colList = List.of("symbol","date","open","high","low","close");
+        queryWrapper_.select(colList); // 加入了列的筛选
+        List<stockDayK> objList = stockDayKMapper.selectList(queryWrapper_);
+        return Response.newSuccess(objList.stream().map(
+                obj -> stockDayKConverter.toDTO(obj)
+        ).toList());
+    }
+
+    public Response<List<stockDayKDTO>> selectByCondition(){
+        /* 类似于JAP的动态查询
+        * 如: 判断这个对象的A字段是否为空, 若不为空, 则加入 where 条件进行过查询
+        * */
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        String symbol = "";
+        // 方式1:
+        // queryWrapper.eq(StringUtils.isNotBlank(symbol), "symbol", symbol);
+        // 方式2:
+        if (StringUtils.isNotBlank(symbol)){
+            queryWrapper.eq("symbol", symbol);
+        }
+        List<stockDayK> objList = stockDayKMapper.selectList(queryWrapper);
+        return Response.newSuccess(objList.stream().map(
+                stockDayKConverter::toDTO
+        ).toList());
+
+    }
+
+    public Response<List<stockDayKDTO>> selectByEntity(){
+        /* 根据这个对象所有的非空属性作为where条件进行查询
+        * */
+        stockDayK obj = stockDayK.builder().symbol("000001.SZ")
+                .tradeDate(LocalDate.of(2024,1,1)).build();
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>(obj);
+        List<stockDayK> objList = stockDayKMapper.selectList(queryWrapper);
+        return Response.newSuccess(objList.stream().map(
+                stockDayKConverter::toDTO
+        ).toList());
+    }
+
+    public Response<List<stockDayKDTO>> selectByAllEq(){
+        /* AllEq 表达式进行查询
+        * 传入Map<String, Object> -> 所有属性进行where条件查询
+        * */
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        Map<String, Object> map = new HashMap<>(){};
+        map.put("symbol", "000001.SZ");
+        map.put("trade_date", LocalDate.of(2024,1,1));
+        List<stockDayK> objList = stockDayKMapper.selectList(queryWrapper.allEq(map));
+        return Response.newSuccess(objList.stream().map(
+                stockDayKConverter::toDTO
+        ).toList());
+    }
+
+    public Response<stockDayKDTO> insertObj(String symbol, String tradeDate, Double open, Double high, Double low, Double close,
+                                            Double preClose, Double chgAmount, Double chgRate, Long volume, Double amount,
+                                            Double turnoverRate, Double pe, Double pb, Double mv, Double cmv) {
+        /* 先检查 symbol - tradeDate 这个对象是否在数据库中 */
+        LocalDate date = LocalDate.parse(tradeDate);
+        stockDayKDTO obj = new stockDayKDTO(symbol, date, open, high, low, close, preClose, chgAmount,
+                chgRate, volume, amount, turnoverRate, pe, pb, mv, cmv);
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        if (stockDayKMapper.exists(queryWrapper.eq("symbol", symbol).eq("trade_date", date))){
+            return Response.newEmpty("Already Exists");
+        }
+        /* 若不在这个数据库中, 则进行插入 */
+        stockDayKMapper.insert(stockDayKConverter.toDAO(obj));
+        return Response.newSuccess(obj);
+    }
+
+    public Response<stockDayKDTO> updateObj(String symbol, String tradeDate, Double open, Double high, Double low, Double close,
+                                            Double preClose, Double chgAmount, Double chgRate, Long volume, Double amount,
+                                            Double turnoverRate, Double pe, Double pb, Double mv, Double cmv){
+        /* 先检查 symbol - tradeDate 这个对象是否在数据库中 */
+        LocalDate date = LocalDate.parse(tradeDate);
+        stockDayKDTO obj = new stockDayKDTO(symbol, date, open, high, low, close, preClose, chgAmount,
+                chgRate, volume, amount, turnoverRate, pe, pb, mv, cmv);
+        QueryWrapper<stockDayK> queryWrapper = new QueryWrapper<>();
+        if (!stockDayKMapper.exists(queryWrapper.eq("symbol", symbol).eq("trade_date", date))){
+            return Response.newEmpty("Not Found");
+        }
+        /* 若在这个数据库中, 则进行更新 */
+        long count = stockDayKMapper.update(stockDayKConverter.toDAO(obj),
+                queryWrapper.eq("symbol", symbol).eq("trade_date", date));
+        return Response.newSuccess(obj);
+    }
+
+}
