@@ -64,7 +64,7 @@ public class stockDayKMapperImpl{
         QueryWrapper<stockDayK> queryWrapper_ = queryWrapper.eq("trade_date",
                         LocalDate.of(2024,1,1))
                 .like("symbol",".SZ"); // .first(true,"symbol");
-        List<String> colList = List.of("symbol","date","open","high","low","close");
+        List<String> colList = List.of("symbol","trade_date","open_price","high_price","low_price","close_price");
         queryWrapper_.select(colList); // 加入了列的筛选
         List<stockDayK> objList = stockDayKMapper.selectList(queryWrapper_);
         return Response.newSuccess(objList.stream().map(
