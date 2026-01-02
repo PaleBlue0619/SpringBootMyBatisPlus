@@ -1,9 +1,6 @@
 package com.maxim.mybatisplus.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Builder;
@@ -57,4 +54,6 @@ public class stockDayK {
     private LocalDateTime createTime;
     @TableField(value = "update_time")
     private LocalDateTime updateTime;
+    @Version
+    private Integer version; // 版本号(乐观锁 -> 用于控制并发行为)
 }

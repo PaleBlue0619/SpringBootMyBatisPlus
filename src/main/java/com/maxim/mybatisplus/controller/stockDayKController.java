@@ -22,7 +22,18 @@ public class stockDayKController {
 
     @GetMapping("/test")
     public Response<List<stockDayKDTO>> testStockDayK(){
-        return stockDayKMapper.selectByWrappers();
+        return stockDayKMapper.selectByLambda();
+    }
+
+    @GetMapping("/test/by-day")
+    public Response<List<stockDayKDTO>> testStockDayKByDay(@RequestParam(name = "trade_date") String day){
+        return stockDayKMapper.selectBySQL(day);
+    }
+
+    @GetMapping("/test/page")
+    public Response<List<stockDayKDTO>> testStockDayKPage(@RequestParam(name = "page_num", required = true) Integer pageNum,
+                                                         @RequestParam(name = "page_size", required = true) Integer pageSize){
+        return stockDayKMapper.selectByPage(pageNum, pageSize);
     }
 
     @PostMapping("/post/by-day-symbol")
@@ -50,7 +61,7 @@ public class stockDayKController {
         return stockDayKMapper.deleteById(id);
     }
 
-    @PostMapping("/put/by-day-symbol")
+    @PutMapping("/put/by-day-symbol")
     public Response<stockDayKDTO> putStockDayK(@RequestParam(name = "symbol", required = true) String symbol,
                                                @RequestParam(name = "trade_date", required = true) String tradeDate,
                                                @RequestParam(name = "open", required = false) Double open,
@@ -69,5 +80,10 @@ public class stockDayKController {
                                                @RequestParam(name = "cmv", required = false) Double cmv){
         return stockDayKMapper.updateObj(symbol, tradeDate, open, high, low, close, preClose, chgAmount, chgRate,
                 volume, amount, turnoverRate, pe, pb, mv, cmv);
+    }
+
+    @PutMapping("/test/optimize")
+    public Response<String> testOptimize(){
+        return stockDayKMapper.concurrentUpdate();
     }
 }

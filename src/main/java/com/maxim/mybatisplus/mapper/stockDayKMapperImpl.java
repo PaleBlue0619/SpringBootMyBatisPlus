@@ -1,7 +1,9 @@
 package com.maxim.mybatisplus.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.maxim.mybatisplus.Response;
 import com.maxim.mybatisplus.converter.stockDayKConverter;
 import com.maxim.mybatisplus.entity.stockDayK;
@@ -9,6 +11,7 @@ import com.maxim.mybatisplus.entity.stockDayKDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -117,6 +120,27 @@ public class stockDayKMapperImpl{
         ).toList());
     }
 
+    public Response<List<stockDayKDTO>> selectByLambda() {
+        /*
+        * Lambda 表达式进行查询 -> ::getter + 链式调用
+        * */
+        LambdaQueryWrapper<stockDayK> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(stockDayK::getSymbol, "000001.SZ")
+                .between(stockDayK::getTradeDate, LocalDate.of(2024,1,1),
+                        LocalDate.of(2025,1,1));
+        List<stockDayK> objList = stockDayKMapper.selectList(queryWrapper);
+        return Response.newSuccess(objList.stream().map(
+                stockDayKConverter::toDTO
+        ).toList());
+    }
+
+    public Response<List<stockDayKDTO>> selectBySQL(String tradeDate){
+        /* 使用Mapper层的@Select (类似Spring Data JPA 对方法注册SQL)*/
+        List<stockDayK> objList = stockDayKMapper.selectByDate(tradeDate);
+        return Response.newSuccess(objList.stream().map(
+                stockDayKConverter::toDTO).toList());
+    }
+
     public Response<stockDayKDTO> insertObj(String symbol, String tradeDate, Double open, Double high, Double low, Double close,
                                             Double preClose, Double chgAmount, Double chgRate, Long volume, Double amount,
                                             Double turnoverRate, Double pe, Double pb, Double mv, Double cmv) {
@@ -150,4 +174,33 @@ public class stockDayKMapperImpl{
         return Response.newSuccess(obj);
     }
 
+    /* 分页查询 */
+    public Response<List<stockDayKDTO>> selectByPage(Integer pageNum, Integer pageSize) {
+        LambdaQueryWrapper<stockDayK> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.gt(stockDayK::getChgRate, 0.0)
+                .eq(stockDayK::getTradeDate, LocalDate.of(2024,1,1));
+        Page<stockDayK> page = new Page<>(pageNum, pageSize);
+        List<stockDayK> objList = stockDayKMapper.selectPage(page, queryWrapper)
+                .getRecords();
+        long total = page.getTotal(); // 返回查询总数量
+        return Response.newSuccess(objList.stream().map(
+                stockDayKConverter::toDTO
+        ).toList());
+    }
+
+    /* 乐观锁 */
+    @Transactional // 添加事务注解 -> 表示下述函数始终是在一个事务中执行（原子性）
+    public Response<String> concurrentUpdate(){
+        List<stockDayK> objList = stockDayKMapper.selectByDate("2024-01-01");
+        var obj1 = objList.get(0);
+        var obj2 = objList.get(0);
+        obj1.setChgRate(obj1.getChgRate() == null? 0.0 : obj1.getChgRate() + 1);
+        obj2.setChgRate(obj2.getChgRate() == null? 0.0 : obj2.getChgRate() + 1);
+        stockDayKMapper.updateById(obj1); // 结果: 插入成功
+        int count = stockDayKMapper.updateById(obj2); // 结果: 更新失败（obj2中仍然是旧版本号, 而数据库中已经是新版本号）
+        if (count == 0){
+            return Response.newEmpty("更新失败");
+        }
+        return Response.newSuccess("更新成功");
+    }
 }
